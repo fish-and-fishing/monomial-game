@@ -360,6 +360,18 @@
     </div>
 
     <script>
+        // Prevent code inspection (Anti-Cheat)
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.onkeydown = function(e) {
+            if(e.keyCode == 123) { return false; } // F12
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) { return false; } // Ctrl+Shift+I
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) { return false; } // Ctrl+Shift+J
+            if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) { return false; } // Ctrl+U
+        }
+        
+        // Clear console repeatedly to annoy inspectors
+        setInterval(function(){ console.clear(); console.log("Focus on the game!"); }, 1000);
+
         // Game State
         let state = {
             targets: [], // Array of {id, m, html, key, factors}
