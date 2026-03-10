@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单项式配对游戏</title>
+    <style>
+        :root {
+            --primary-blue: #3498db;
+            --primary-red: #e74c3c;
+            --bg-color: #f0f3f5;
+            --text-color: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            color: var(--text-color);
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            gap: 20px;
+        }
+
+        .stats-panel {
+            background: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            font-size: 1.2rem;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .target-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(231, 76, 60, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            width: 100%;
+            border: 2px dashed var(--primary-red);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        #target-card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            width: 100%;
+            justify-items: center;
+        }
+
+        .card {
+            width: 90px;
+            height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+            position: relative;
+            background: white;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .card.red {
+            background: linear-gradient(135deg, #ff7675, #d63031);
+            color: white;
+            border: 2px solid #c0392b;
+        }
+
+        .card.blue {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            border: 2px solid #2980b9;
+        }
+
+        .card.selected {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px var(--primary-blue);
+            border-color: #f1c40f;
+            z-index: 10;
+        }
+
+        .card.matched {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        .card-content {
+            padding: 5px;
+            text-align: center;
+        }
+
+        /* Superscript handling */
+        sup {
+            font-size: 0.7em;
+            vertical-align: super;
+        }
+
+        .grid-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            width: 100%;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            justify-items: center;
+        }
+
+        .collection-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            width: 100%;
+            min-height: 100px;
+            justify-content: center;
+        }
+
+        .collection-title {
+            width: 100%;
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+
+        .collected-card {
+            width: 60px;
+            height: 80px;
+            font-size: 0.8rem;
+            background: var(--primary-red);
+            color: white;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            animation: popIn 0.3s ease-out;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .collected-card:hover {
+            transform: scale(1.1);
+            background: #c0392b;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); }
+            80% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        .message {
+            height: 30px;
+            color: var(--text-color);
+            font-weight: bold;
+        }
+
+        .btn {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        /* Math formatting */
+        .math-expr {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+
+        /* Victory Animation Styles */
+        .victory-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        .victory-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .victory-modal {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transform: scale(0.8);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .victory-overlay.active .victory-modal {
+            transform: scale(1);
+        }
+        
+        .victory-title {
+            font-size: 3em;
+            color: #e67e22;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0px #f1c40f;
+        }
+        
+        .victory-message {
+            font-size: 1.5em;
+            color: #34495e;
+            margin-bottom: 30px;
+        }
+        
+        .play-again-btn {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        
+        .play-again-btn:hover {
+            background-color: #27ae60;
+            transform: scale(1.05);
+        }
+        
+        /* Confetti */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            animation: fall linear forwards;
+        }
+        
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(720deg);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>单项式配对游戏 (Monomial Match)</h1>
+    
+    <div class="stats-panel">
+        <div>
+            <label for="level-select">难度 (Level):</label>
+            <select id="level-select" onchange="changeLevel()" style="font-size: 1rem; padding: 5px;">
+                <option value="1">Level 1 (5 Cards, x/y)</option>
+                <option value="2">Level 2 (10 Cards, x/y)</option>
+                <option value="3">Level 3 (5 Cards, a/b/c)</option>
+                <option value="4">Level 4 (10 Cards, a/b/c)</option>
+            </select>
+        </div>
+        <div>目标: <span id="target-count">0</span></div>
+        <div>已收集: <span id="score">0</span></div>
+    </div>
+
+    <div class="game-container">
+        <div class="message" id="message">请先选择多个蓝色卡片（因子），然后点击对应的红色卡片（乘积）！蓝色卡片恰好够用哦！</div>
+
+        <!-- Target Red Card Area -->
+        <div class="target-area">
+            <h3>当前目标 (Targets)</h3>
+            <div id="target-card-container">
+                <!-- Red cards will be injected here -->
+            </div>
+        </div>
+
+        <!-- Blue Cards Grid -->
+        <div class="grid-area" id="grid-area">
+            <!-- Blue cards will be injected here -->
+        </div>
+
+        <!-- Collection Area -->
+        <div class="collection-area">
+            <div class="collection-title">我的收藏 (Collection)</div>
+            <div id="collection-container" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                <!-- Collected red cards go here -->
+            </div>
+        </div>
+        
+        <button class="btn" onclick="initGame()">重新开始 (Restart)</button>
+    </div>
+
+    <!-- Victory Overlay -->
+    <div class="victory-overlay" id="victory-overlay">
+        <div class="victory-modal">
+            <div class="victory-title">🎉 恭喜! 🎉</div>
+            <div class="victory-message">你完成了所有挑战！</div>
+            <button class="play-again-btn" onclick="initGame()">再玩一次</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let state = {
+            targets: [], // Array of {id, m, html, key, factors}
+            blueCards: [], // Array of card objects {id: int, value: string, text: string}
+            collected: [], // Array of collected objects {target: {}, blueCards: []}
+            selectedIndices: [],
+            score: 0,
+            level: 1,
+            completedTargets: 0,
+            maxTargets: 10,
+            checking: false
+        };
+
+        // Math Utilities
+        function formatMonomial(coeff, vars) {
+            // vars is object {x: 1, y: 2} -> x^1 y^2
+            if (coeff === 0) return "0";
+            
+            let str = "";
+            
+            // Coefficient
+            // The user requested NO coefficients (meaning always 1 or -1 implicitly, but effectively just variables).
+            // So we just show nothing for 1.
+            // If we decide to support negative, we can show "-", but for "no real number coefficients", 
+            // maybe they mean just variables? "全部都不使用实数的系数" -> Don't use real number coefficients.
+            // This usually implies coeff is 1.
+            
+            if (coeff === -1 && Object.keys(vars).length > 0) str += "-";
+            else if (coeff === 1 && Object.keys(vars).length > 0) str += "";
+            else if (Object.keys(vars).length === 0) str += coeff; // If it's just a number (e.g. 1), show it? Or is it 1?
+            else str += coeff;
+
+            // Variables
+            const sortedVars = Object.keys(vars).sort();
+            for (let v of sortedVars) {
+                const exp = vars[v];
+                if (exp === 0) continue;
+                str += `<span class="math-expr">${v}</span>`;
+                if (exp > 1) str += `<sup>${exp}</sup>`;
+            }
+
+            if (str === "") return "1"; 
+            
+            return str;
+        }
+
+        function generateMonomial(varsList) {
+            // const coeffs = [2, 3, 4, 5, 6, 7, 8, 9]; 
+            // User requested no real coefficients -> Coeff is always 1.
+            
+            if (!varsList) varsList = ['x', 'y'];
+            
+            // const c = coeffs[Math.floor(Math.random() * coeffs.length)] * (Math.random() > 0.8 ? -1 : 1);
+            const c = 1; // Always 1
+            
+            const numVars = Math.floor(Math.random() * varsList.length) + 1; // 1 to all variables
+            
+            let v = {};
+            // Pick random variables
+            const shuffledVars = varsList.sort(() => 0.5 - Math.random()).slice(0, numVars);
+            
+            for (let variable of shuffledVars) {
+                v[variable] = Math.floor(Math.random() * 2) + 1; // exponent 1 or 2
+            }
+            
+            return { c, v };
+        }
+
+        function multiplyMonomials(m1, m2) {
+            const c = m1.c * m2.c;
+            let v = { ...m1.v };
+            
+            for (let key in m2.v) {
+                if (v[key]) v[key] += m2.v[key];
+                else v[key] = m2.v[key];
+            }
+            
+            return { c, v };
+        }
+
+        function monomialToString(m) {
+            // Returns a unique string key for comparison
+            let keys = Object.keys(m.v).sort();
+            let vStr = keys.map(k => `${k}^${m.v[k]}`).join('');
+            return `${m.c}${vStr}`;
+        }
+        
+        function monomialToHTML(m) {
+            return formatMonomial(m.c, m.v);
+        }
+
+        // Game Logic
+        function checkWin() {
+            if (state.completedTargets === state.maxTargets) {
+                const endTime = Date.now();
+                const elapsedSeconds = (endTime - state.startTime) / 1000;
+                let specialMessage = "";
+
+                // Hidden Easter Egg: Speed Run
+                if (state.level === 1) {
+                    if (elapsedSeconds < 60) {
+                        specialMessage = "<br><span style='color: #e74c3c; font-size: 0.8em;'>⚡ 闪电雷霆战士，太快了！⚡</span>";
+                    }
+                } else {
+                    if (elapsedSeconds < 120) {
+                        specialMessage = "<br><span style='color: #e74c3c; font-size: 0.8em;'>⚡ 闪电雷霆战士，太快了！⚡</span>";
+                    }
+                }
+
+                document.getElementById('message').innerHTML = "🎉 恭喜! 你完成了所有目标! 🎉" + specialMessage;
+                document.getElementById('message').style.color = "#27ae60";
+                
+                // Update modal message as well
+                document.querySelector('.victory-message').innerHTML = "你完成了所有挑战！" + specialMessage;
+
+                // Show victory overlay
+                setTimeout(() => {
+                    document.getElementById('victory-overlay').classList.add('active');
+                    startConfetti();
+                }, 500);
+            }
+        }
+        
+        function startConfetti() {
+            const colors = ['#f1c40f', '#e67e22', '#e74c3c', '#9b59b6', '#3498db', '#2ecc71'];
+            
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.top = -10 + 'px';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                confetti.style.animationDelay = (Math.random() * 2) + 's';
+                
+                document.body.appendChild(confetti);
+                
+                // Remove after animation
+                setTimeout(() => {
+                    confetti.remove();
+                }, 5000);
+            }
+        }
+
+        function initGame() {
+            state.score = 0;
+            state.completedTargets = 0;
+            state.checking = false;
+            state.selectedIndices = [];
+            state.targets = [];
+            state.collected = [];
+            state.startTime = Date.now(); // Track start time for easter egg
+            
+            // Get level
+            const levelSelect = document.getElementById('level-select');
+            state.level = parseInt(levelSelect.value);
+            
+            // Set maxTargets based on level
+            if (state.level === 1 || state.level === 3) {
+                state.maxTargets = 5;
+            } else {
+                state.maxTargets = 10;
+            }
+            
+            document.getElementById('score').innerText = state.score;
+            document.getElementById('target-count').innerText = state.maxTargets;
+            document.getElementById('collection-container').innerHTML = '';
+            
+            document.getElementById('message').innerText = "请先选择多个蓝色卡片（因子），然后点击对应的红色卡片（乘积）！蓝色卡片恰好够用哦！";
+            document.getElementById('message').style.color = "#e74c3c";
+            
+            // Hide overlay
+            document.getElementById('victory-overlay').classList.remove('active');
+            
+            // Remove any existing confetti
+            document.querySelectorAll('.confetti').forEach(el => el.remove());
+
+            startRound();
+        }
+
+        function changeLevel() {
+            initGame();
+        }
+
+        function startRound() {
+            if (state.completedTargets >= state.maxTargets) {
+                document.getElementById('message').innerText = "恭喜！你完成了所有目标！";
+                document.getElementById('target-card-container').innerHTML = '<div class="card red"><div>WIN!</div></div>';
+                return;
+            }
+
+            // Determine variables based on level
+            let varsList = ['x', 'y'];
+            if (state.level === 3 || state.level === 4) varsList = ['a', 'b', 'c'];
+
+            state.targets = [];
+            state.blueCards = [];
+            state.selectedIndices = [];
+            
+            let neededTargets = state.maxTargets;
+
+            let pool = [];
+            let generatedKeys = new Set();
+            let attempts = 0;
+
+            while (state.targets.length < neededTargets && attempts < 100) {
+                attempts++;
+                
+                // Randomize number of factors: 2 or 3
+                // Level 1: mostly 2 factors. Level 2: 2 or 3.
+                // Level 3/4: More 3 factors.
+                
+                let numFactors = 2;
+                
+                // Force some 3-factor targets based on level
+                if (state.level === 3 || state.level === 4) {
+                    // 50% chance for 3 factors
+                    if (Math.random() > 0.5) numFactors = 3;
+                } else if (state.level === 2) {
+                    // 30% chance for 3 factors
+                    if (Math.random() > 0.7) numFactors = 3;
+                } else {
+                    // Level 1: Mostly 2, maybe rare 3? Let's keep it simple for Level 1: just 2.
+                    numFactors = 2;
+                }
+                
+                // Ensure at least ONE 3-factor target if level > 1 and we are generating multiple targets
+                if ((state.level > 1) && state.targets.length === 0) {
+                     // Let's not force it hard, but make sure probability is high enough or just random is fine.
+                     // Actually user said "有一些红色卡片需要3张", implies existence.
+                     // Let's force the first one to be 3 factors if level > 1 to guarantee variety?
+                     // Or just rely on probability. 50% for 5 cards means ~2-3 cards. 
+                }
+
+                let factors = [];
+                let product = { c: 1, v: {} };
+                
+                for (let j = 0; j < numFactors; j++) {
+                    const m = generateMonomial(varsList);
+                    factors.push(m);
+                    product = multiplyMonomials(product, m);
+                }
+                
+                const productKey = monomialToString(product);
+                
+                // Check if duplicate
+                if (generatedKeys.has(productKey)) {
+                    continue; // Skip and try again
+                }
+                
+                generatedKeys.add(productKey);
+
+                state.targets.push({
+                    id: `t_${Date.now()}_${state.targets.length}`,
+                    m: product,
+                    html: monomialToHTML(product),
+                    key: productKey,
+                    factors: factors
+                });
+
+                // Add factors to pool
+                factors.forEach(f => {
+                    pool.push(f);
+                });
+            }
+
+            // NO DISTRACTORS - Blue cards must be exactly enough
+            // Commenting out distractor generation
+            /*
+            const distractorCount = state.maxTargets;
+            for(let i=0; i<distractorCount; i++) {
+                pool.push(generateMonomial(varsList));
+            }
+            */
+            
+            // Shuffle pool
+            pool.sort(() => 0.5 - Math.random());
+            
+            state.blueCards = pool.map((m, idx) => ({
+                id: idx,
+                m: m,
+                html: monomialToHTML(m),
+                key: monomialToString(m)
+            }));
+            
+            renderGame();
+        }
+
+        function renderGame() {
+            // Render Targets
+            const targetContainer = document.getElementById('target-card-container');
+            targetContainer.innerHTML = '';
+            state.targets.forEach(target => {
+                const el = document.createElement('div');
+                el.className = 'card red';
+                el.onclick = () => onTargetClick(target.id);
+                el.innerHTML = `<div class="card-content">${target.html}</div>`;
+                targetContainer.appendChild(el);
+            });
+
+            // Render Blue Grid
+            const grid = document.getElementById('grid-area');
+            grid.innerHTML = '';
+            
+            state.blueCards.forEach(card => {
+                const el = document.createElement('div');
+                el.className = `card blue ${state.selectedIndices.includes(card.id) ? 'selected' : ''}`;
+                el.onclick = () => onCardClick(card.id);
+                el.innerHTML = `<div class="card-content">${card.html}</div>`;
+                grid.appendChild(el);
+            });
+            
+            document.getElementById('message').innerText = "请先选择多个蓝色卡片（因子），然后点击对应的红色卡片（乘积）！";
+        }
+
+        function onCardClick(id) {
+            if (state.checking) return;
+
+            // If already selected, deselect
+            if (state.selectedIndices.includes(id)) {
+                state.selectedIndices = state.selectedIndices.filter(i => i !== id);
+                renderGame();
+                return;
+            }
+
+            // Select
+            state.selectedIndices.push(id);
+            renderGame();
+            
+            // Wait for user to click target...
+        }
+
+        function onTargetClick(targetId) {
+            if (state.checking) return;
+            
+            // Validate: Must have selected at least 2 blue cards
+            if (state.selectedIndices.length < 2) {
+                document.getElementById('message').innerText = "请至少选择两个蓝色卡片（因子）！";
+                return;
+            }
+            
+            // Check if selected blue cards multiply to target
+            const target = state.targets.find(t => t.id === targetId);
+            if (!target) return;
+            
+            let currentProduct = { c: 1, v: {} };
+            let selectedCards = [];
+            
+            state.selectedIndices.forEach(idx => {
+                const card = state.blueCards.find(c => c.id === idx);
+                if (card) {
+                    currentProduct = multiplyMonomials(currentProduct, card.m);
+                    selectedCards.push(card);
+                }
+            });
+            
+            const targetKey = monomialToString(target.m);
+            const currentKey = monomialToString(currentProduct);
+            
+            if (targetKey === currentKey) {
+                // Correct!
+                state.score++;
+                state.completedTargets++;
+                document.getElementById('score').innerText = state.score;
+                document.getElementById('message').innerText = "正确！";
+                document.getElementById('message').style.color = "#27ae60";
+                
+                // Add to collection
+                state.collected.push({
+                    id: Date.now(),
+                    target: target,
+                    blueCards: selectedCards
+                });
+                
+                // Remove used blue cards and target
+                state.blueCards = state.blueCards.filter(c => !state.selectedIndices.includes(c.id));
+                state.targets = state.targets.filter(t => t.id !== targetId);
+                state.selectedIndices = [];
+                
+                renderGame();
+                renderCollection();
+                checkWin();
+                
+            } else {
+                // Incorrect
+                document.getElementById('message').innerText = "错误！请再试一次。";
+                document.getElementById('message').style.color = "#e74c3c";
+                
+                // Deselect
+                state.selectedIndices = [];
+                renderGame();
+            }
+        }
+        
+        function addCollection(html, id) {
+            const container = document.getElementById('collection-container');
+            const el = document.createElement('div');
+            el.className = 'collected-card';
+            el.innerHTML = html;
+            el.onclick = () => restoreCollection(id);
+            el.title = "点击还原 (Click to restore)";
+            container.appendChild(el);
+        }
+
+        function restoreCollection(id) {
+            if (state.checking) return;
+            
+            const collectedIndex = state.collected.findIndex(c => c.id === id);
+            if (collectedIndex === -1) return;
+            
+            const item = state.collected[collectedIndex];
+            
+            // Restore Target
+            state.targets.push(item.target);
+            
+            // Restore Blue Cards
+            // We need to make sure IDs don't conflict if we regenerated anything, but IDs are index based in previous logic?
+            // Actually blue cards ID were indices. We should probably give them unique IDs to be safe or re-assign IDs.
+            // Let's just push them back with new IDs to avoid conflict with current pool.
+            
+            let maxId = state.blueCards.reduce((max, c) => Math.max(max, c.id), -1);
+            
+            item.blueCards.forEach(c => {
+                maxId++;
+                state.blueCards.push({
+                    ...c,
+                    id: maxId
+                });
+            });
+            
+            // Remove from collection
+            state.collected.splice(collectedIndex, 1);
+            
+            // Remove DOM element
+            // Simpler to just re-render collection
+            renderCollection();
+            
+            // Update Score
+            state.score--;
+            state.completedTargets--;
+            document.getElementById('score').innerText = state.score;
+            
+            renderGame();
+        }
+
+        function renderCollection() {
+            const container = document.getElementById('collection-container');
+            container.innerHTML = '';
+            state.collected.forEach(item => {
+                addCollection(item.target.html, item.id);
+            });
+        }
+
+        // Start
+        initGame();
+
+    </script>
+</body>
+</html>
